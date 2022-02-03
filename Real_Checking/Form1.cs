@@ -28,7 +28,7 @@ namespace Real_Checking
 		/// <summary>
 		/// Writer to Log TextBox
 		/// </summary>
-		private readonly Writer _writer;
+		private Writer _writer;
 
 
 		private void run_button_Click(object sender, EventArgs e)
@@ -42,7 +42,9 @@ namespace Real_Checking
 			_webClient.Headers.Add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36");
 
 
+			_writer = new Writer(statusConsole, outputFileTextBox);
 			_bw = new BackgroundWorker {WorkerSupportsCancellation = true};
+
 			_bw.DoWork += (obj, ea)=> Check_Real();		//Adding method for checking to _bw
 			_bw.RunWorkerAsync();
 		}
@@ -81,7 +83,7 @@ namespace Real_Checking
 
 					//Is user real?
 					//Checks for availible field for his username login on page
-					Match usernameRegexMatch = Regex.Match(htmlPage, "(<span class=\"userName(.+|)\" dir=\"ltr\">@)(.+)(<\\/span>)", RegexOptions.IgnoreCase);                                          //Проверка на существование профиля
+					Match usernameRegexMatch = Regex.Match(htmlPage, "(<span class=\"(.+|) dir=\"ltr\">@)(.+)(<\\/span>)", RegexOptions.IgnoreCase);                                          //Проверка на существование профиля
 					if (!usernameRegexMatch.Success)                //If there is no field with username
 						throw new Exception("No such user");
 					
@@ -103,17 +105,14 @@ namespace Real_Checking
 						if (startTime.Year - userYear <= 1)
 						{
 							var currentFullDate = (startTime.Year * 365) + (startTime.Month * 30) + startTime.Day;					//Current full date in days format;
-							var uFullDate = userYear * 365;																			//Converting userYear to days;
 							var uMonth = Helper.ToInt(uDateRegexMatch.Value[21].ToString() + uDateRegexMatch.Value[22]);			//Month of last user`s answer
 							//Check for month
 							if (Math.Abs(startTime.Month - uMonth) <= 1)
 							{
-								uFullDate += (uMonth * 30);																				//User`s Year in days + month in days
+								var uFullDate = userYear * 365 + (uMonth * 30); ;													//Converting userYear + months in days;
 								var uDay = Helper.ToInt(uDateRegexMatch.Value[24].ToString() + uDateRegexMatch.Value[25]);		//Day of post
 								if (Math.Abs(currentFullDate - (uFullDate + uDay)) <= 12)	//If delta of current date (in days) and user` last post date (in days) < 13 
-								{
 									isUserActive = true;
-								}
 							}
 						}
 
@@ -140,8 +139,6 @@ namespace Real_Checking
 					
 					//Add correct login to correct logins list, and output login status to console
 					_writer.LogFileOutput(ref parsedLogins, numMass, "OK", parsedUsername);
-
-					//webClientData.Close();                                                   //Close user page
 				}
 				catch(Exception exception)
 				{
@@ -151,10 +148,7 @@ namespace Real_Checking
 				}
 			}
 
-
-			DateTime endTime = DateTime.Now;													//Endtime of checking process
-
-			_writer.ConsoleWrite((endTime - startTime).ToString(), loginConsole);			//Output how long check process was working
+			_writer.ConsoleWrite((DateTime.Now - startTime).ToString(), loginConsole);			//Output how long check process was working
 
 			stopButton.Visible = false;
 			runButton.Visible = true;
@@ -213,7 +207,6 @@ namespace Real_Checking
 		public Form1()
 		{
 			InitializeComponent();
-			_writer = new Writer(statusConsole, outputFileTextBox);
 		}
 
 		private void Form1_Load(object sender, EventArgs e)
